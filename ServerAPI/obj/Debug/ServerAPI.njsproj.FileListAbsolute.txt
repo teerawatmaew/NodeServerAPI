@@ -1,0 +1,3 @@
+C:\My Project\Serverapi\ServerAPI\obj\Debug\ServerAPI.njsprojAssemblyReference.cache
+C:\My Project\Serverapi\ServerAPI\obj\Debug\ServerAPI.njsproj.CoreCompileInputs.cache
+C:\My Project\Serverapi\ServerAPI\bin\Microsoft.NodejsTools.WebRole.dll
