@@ -145,7 +145,7 @@ app.post('/user', function (request, response) {
             connection.query('INSERT INTO accounts(username, password, user_class, email) VALUES(?,?,?,?)', [username, password, userclass, email], (err, result) => {
                 if (err) {
                     throw err;
-                    response.status(404).send("Can create new account");
+                    response.status(404).send("Can not create new account");
                 } else {
                     response.status(200).send("Completed to create account");
                 }
