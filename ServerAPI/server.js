@@ -121,6 +121,26 @@ app.get('/user', function (request, response) {
     });
 });
 
+app.post('/signup', function (request, response) {
+    var username = request.body.username;
+    var password = request.body.password;
+    var email = request.body.email;
+    var userclass = 3;
+    connection.query('SELECT * FROM accounts WHERE username = ? OR email = ?', [username, email], function (error, results, fields) {
+        if (results.length > 0) {
+            response.status(404).send("Account is already exists");
+        } else {
+            connection.query('INSERT INTO accounts(username, password, user_class, email) VALUES(?,?,?,?)', [username, password, userclass, email], (err, result) => {
+                if (err) {
+                    throw err;
+                    response.status(404).send("Can not create new account");
+                } else {
+                    response.status(200).send("Completed to create account");
+                }
+            });
+        }
+    });
+})
 
 app.get('/user/(:id)', function (request, response) {
     connection.query('SELECT * FROM accounts WHERE id = ' + request.params.id, function (err, result) {
