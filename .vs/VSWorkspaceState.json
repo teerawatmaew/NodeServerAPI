@@ -1,8 +1,10 @@
 {
   "ExpandedNodes": [
     "",
-    "\\ServerAPI"
+    "\\ServerAPI",
+    "\\ServerAPI\\api",
+    "\\ServerAPI\\api\\v1"
   ],
-  "SelectedNode": "\\ServerAPI\\package.json",
+  "SelectedNode": "\\ServerAPI\\api\\v1",
   "PreviewInSolutionExplorer": false
 }

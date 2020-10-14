@@ -7,6 +7,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var path = require('path');
 var jwt = require("jsonwebtoken");
+var fs = require('fs');
 
 var app = express();
 
@@ -22,41 +23,7 @@ app.use(bodyParser.json());
 app.use(express.static(process.env.PWD + '/img'));
 app.use(express.static(path.join(__dirname, 'public'))); // configure express to use public folder
 
-//<===================>
-//<====== login ======>
-//<===================>
-
-app.post('/login', function (request, response) {
-    var username = request.body.username;
-    var password = request.body.password;
-    connection.query('SELECT * FROM accounts WHERE username = ? AND password = ?', [username, password], function (error, results, fields) {
-        if (results.length > 0) {
-            if (results[0].user_class == 1) {
-                const user = {
-                    name: username,
-                    isadmin: "yes"
-                };
-                const accessToken = generateAccessToken(user);
-                const refreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET);
-                refreshTokens.push(refreshToken);
-                response.json({ accessToken: accessToken, refreshToken: refreshToken });
-            }
-            else {
-                const user = {
-                    name: username,
-                    isadmin: "no"
-                };
-                const accessToken = generateAccessToken(user);
-                const refreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET);
-                refreshTokens.push(refreshToken);
-                response.json({ accessToken: accessToken, refreshToken: refreshToken });
-            }
-        } else {
-            response.send('Incorrect Username and/or Password!');
-        }
-        response.end();
-    });
-});
+var user = require('./api/v1/user');
 
 let refreshTokens = [];
 
@@ -95,118 +62,20 @@ function generateAccessToken(user) {
     return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '300s' });
 }
 
+//<======= user api =======>
 
-//<======================>
-//<====== user api ======>
-//<======================>
+app.post('/api/v1/login', user.login);
+app.get('/api/v1/signup', user.signup);
+//app.post('/api/v1/forgot', user.forgot);
+app.get('/api/v1/profile', authenticateToken, user.profile);
+app.put('/api/v1/profile', authenticateToken, user.editprofile);
+app.get('/api/v1/user/:id', user.read);
+//app.get('/api/v1/user/:keyword', user.search);
+app.get('/api/v1/user', user.readall);
+app.post('/api/v1/user', user.create);
+app.put('/api/v1//user/:id', user.update);
+app.delete('/api/v1//user/:id', user.delete);
 
-app.get('/myprofile', authenticateToken, function (request, response) {
-    //if (request.user.isadmin == "yes") { response.status(403).send("You're ADMIN!!"); } else {
-        connection.query('SELECT * FROM accounts WHERE username = ?', [request.user.name], function (error, results, fields) {
-            if (results.length > 0) response.status(200).json(results);
-        });
-    //}
-})
-
-app.get('/user', function (request, response) {
-    //if (request.user.admin == true) { response.status(403).send("access denied"); } else {
-    connection.query('SELECT * FROM accounts', (err, results) => {
-        if (err) {
-            throw err;
-            response.status(404).send("Can not found users");
-        }
-        else {
-            response.status(200).json(results);
-        }
-    });
-});
-
-app.post('/signup', function (request, response) {
-    var username = request.body.username;
-    var password = request.body.password;
-    var email = request.body.email;
-    var userclass = 3;
-    connection.query('SELECT * FROM accounts WHERE username = ? OR email = ?', [username, email], function (error, results, fields) {
-        if (results.length > 0) {
-            response.status(404).send("Account is already exists");
-        } else {
-            connection.query('INSERT INTO accounts(username, password, user_class, email) VALUES(?,?,?,?)', [username, password, userclass, email], (err, result) => {
-                if (err) {
-                    throw err;
-                    response.status(404).send("Can not create new account");
-                } else {
-                    response.status(200).send("Completed to create account");
-                }
-            });
-        }
-    });
-})
-
-app.get('/user/(:id)', function (request, response) {
-    connection.query('SELECT * FROM accounts WHERE id = ' + request.params.id, function (err, result) {
-        if (err) {
-            throw err;
-            response.status(404).send("Can not found user");
-        } else {
-            response.status(200).json(result);
-        }
-    });
-});
-
-app.post('/user', function (request, response) {
-    var username = request.body.username;
-    var password = request.body.password;
-    var email = request.body.email;
-    var userclass = request.body.userclass;
-    connection.query('SELECT * FROM accounts WHERE username = ? OR email = ?', [username, email], function (error, results, fields) {
-        if (results.length > 0) {
-            response.status(404).send("Account is already exists");
-        } else {
-            connection.query('INSERT INTO accounts(username, password, user_class, email) VALUES(?,?,?,?)', [username, password, userclass, email], (err, result) => {
-                if (err) {
-                    throw err;
-                    response.status(404).send("Can not create new account");
-                } else {
-                    response.status(200).send("Completed to create account");
-                }
-            });
-        }
-    });
-})
-
-app.put('/user/(:id)', function (request, response) {
-    var id = request.params.id;
-    var username = request.body.editusername;
-    var password = request.body.editpassword;
-    var email = request.body.editemail;
-    var userclass = request.body.edituserclass;
-    connection.query('SELECT * FROM accounts WHERE username = ? OR email = ?', [username, email], function (error, results, fields) {
-        if (results.length > 1) {
-            response.status(404).send("Account or E-mail are already exists");
-        } else {
-            connection.query('UPDATE accounts SET username=?, password=?, user_class=?, email=? WHERE id=?', [username, password, userclass, email, id], (err, result) => {
-                if (err) {
-                    throw err;
-                    response.status(404).send("Can not update this account");
-                } else {
-                    response.status(200).send("Update completed");
-                }
-            });
-        }
-    });
-})
-
-app.delete('/user/(:id)', function (request, response) {
-    var user = { id: request.params.id }
-    connection.query('DELETE FROM accounts WHERE id = ' + request.params.id, user, function (err, result) {
-        if (err) {
-            throw err;
-            response.status(404).send("Can not delete this account");
-        } else {
-            response.status(200).send("Delete completed");
-        }
-    });
-})
 
 //<========================>
 //<====== course api ======>
