@@ -17,7 +17,14 @@ exports.signup = function (request, response) {
     var username = request.body.username;
     var password = request.body.password;
     var email = request.body.email;
-    var userclass = 3;
+    var userclass = 1;
+    var check_class_from_mail = (email.split('@'))[1].split('.');
+    if (check_class_from_mail[0] != 'email' || 'gmail' || 'yahoo') {
+        userclass = 2;
+    }
+    var name = request.body.name;
+    var surname = request.body.name;
+    var fullname = name + " " + surname;
     connection.query('SELECT * FROM accounts WHERE username = ? OR email = ?', [username, email], function (error, results, fields) {
         if (results.length > 0) {
             response.status(404).send("Account is already exists");
@@ -27,6 +34,7 @@ exports.signup = function (request, response) {
                     throw err;
                     response.status(404).send("Can not create new account");
                 } else {
+                    sendEmailTo(email, fullname);
                     response.status(200).send("Completed to create account");
                 }
             });
@@ -174,6 +182,22 @@ exports.delete = function (request, response) {
     });
 }
 
+exports.forgot = function (request, response) {
+    var email = request.body.email;
+    connection.query('SELECT * FROM accounts WHERE email = ?', [email], function (error, results, fields) {
+        if (results.length > 0) {
+            sendEmailTo(email, "", forgot);
+            response.status(200).send("Change password link sent to your E-mail");
+        } else {
+            response.status(404).send("Invalid email");
+        }
+    });
+}
+
+exports.search = function (request, response) {
+
+}
+
 //<============================>
 //<====== token function ======>
 //<============================>
@@ -195,7 +219,7 @@ function generateAccessToken(user) {
 }
 
 
-function sendEmailTo(email) {
+function sendEmailTo(email,name,type) {
     let transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 587,
@@ -206,13 +230,36 @@ function sendEmailTo(email) {
         }
     });
     // เริ่มทำการส่งอีเมล
-    let info = transporter.sendMail({
-        from: '"Administrator" <com5630159@gmail.com>', // อีเมลผู้ส่ง
-        to: email, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-        subject: 'Welcome to KMUTNB online course', // หัวข้ออีเมล
-        text: 'Hi ' + email + ', thanks for joining KMUTNB online course.', // plain text body
-        html: '<b>Hi ' + email + ', thanks for joining KMUTNB online course.</b>' // html body
-    });
+    switch (type) {
+        case signup:
+            let info = transporter.sendMail({
+                from: '"Administrator" <com5630159@gmail.com>', // อีเมลผู้ส่ง
+                to: email, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+                subject: 'Welcome to KMUTNB online course', // หัวข้ออีเมล
+                text: 'Hi ' + name + ', thanks for joining KMUTNB online course.', // plain text body
+                html: '<b>Hi ' + name + ', thanks for joining KMUTNB online course.</b>' // html body
+            });
+            break;
+        case forgot: //send link to change password
+            let info = transporter.sendMail({
+                from: '"Administrator" <com5630159@gmail.com>', // อีเมลผู้ส่ง
+                to: email, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+                subject: 'Recover your account', // หัวข้ออีเมล
+                text: 'Change your password. Just click the link below, and change your new password in website.', // plain text body
+                html: '<h2>Change your password.</h2><br><p>Just click the link below, and change your new password in website.</p>' // html body
+            });
+            break;
+        case changedpassword:
+            let info = transporter.sendMail({
+                from: '"Administrator" <com5630159@gmail.com>', // อีเมลผู้ส่ง
+                to: email, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+                subject: 'Your password has been changed', // หัวข้ออีเมล
+                text: 'Hi ' + email + '. Your password has been changed successfully. You can login to website immediately.', // plain text body
+                html: '<h2>Hi ' + email + '.</h2><br><p>Your password has been changed successfully. You can login to website immediately.</p>' // html body
+            });
+            break;
+    }
+    
     // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
     //console.log('Message sent: %s', info.messageId);
 }

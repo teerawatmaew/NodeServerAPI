@@ -23,8 +23,6 @@ app.use(bodyParser.json());
 app.use(express.static(process.env.PWD + '/img'));
 app.use(express.static(path.join(__dirname, 'public'))); // configure express to use public folder
 
-var user = require('./api/v1/user');
-
 let refreshTokens = [];
 
 app.post('/token', (request, response) => {
@@ -63,12 +61,15 @@ function generateAccessToken(user) {
 }
 
 //<======= user api =======>
+var user = require('./api/v1/user');
 
 app.post('/api/v1/login', user.login);
 app.get('/api/v1/signup', user.signup);
-//app.post('/api/v1/forgot', user.forgot);
-app.get('/api/v1/profile', authenticateToken, user.profile);
-app.put('/api/v1/profile', authenticateToken, user.editprofile);
+app.post('/api/v1/forgot', user.forgot);
+app.get('/api/v1/profile', user.profile);
+app.put('/api/v1/profile', user.editprofile);
+//app.get('/api/v1/profile', authenticateToken, user.profile);
+//app.put('/api/v1/profile', authenticateToken, user.editprofile);
 app.get('/api/v1/user/:id', user.read);
 //app.get('/api/v1/user/:keyword', user.search);
 app.get('/api/v1/user', user.readall);
@@ -88,7 +89,7 @@ app.get('/course', function (request, response) {
             response.status(404).send("Can not found users");
         }
         else {
-            response.status(200).json(results);
+            response.status(200).json({ results });
         }
     });
 });

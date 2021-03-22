@@ -6,6 +6,7 @@
   "author": {
     "name": ""
   },
+  "proxy": "http://localhost:3000",
   "dependencies": {
     "body-parser": "^1.19.0",
     "cookie-parser": "^1.4.5",
