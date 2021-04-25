@@ -215,12 +215,12 @@ function authenticateToken(request, response, next) {
 }
 
 function generateAccessToken(user) {
-    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '300s' });
+    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 }
 
 
-function sendEmailTo(email,name,type) {
-    let transporter = nodemailer.createTransport({
+function sendEmailTo(email, name, type) {
+    var transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 587,
         secure: false, // true for 465, false for other ports
@@ -232,7 +232,7 @@ function sendEmailTo(email,name,type) {
     // เริ่มทำการส่งอีเมล
     switch (type) {
         case signup:
-            let info = transporter.sendMail({
+            var info = transporter.sendMail({
                 from: '"Administrator" <com5630159@gmail.com>', // อีเมลผู้ส่ง
                 to: email, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
                 subject: 'Welcome to KMUTNB online course', // หัวข้ออีเมล
@@ -241,7 +241,7 @@ function sendEmailTo(email,name,type) {
             });
             break;
         case forgot: //send link to change password
-            let info = transporter.sendMail({
+            var info = transporter.sendMail({
                 from: '"Administrator" <com5630159@gmail.com>', // อีเมลผู้ส่ง
                 to: email, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
                 subject: 'Recover your account', // หัวข้ออีเมล
@@ -250,7 +250,7 @@ function sendEmailTo(email,name,type) {
             });
             break;
         case changedpassword:
-            let info = transporter.sendMail({
+            var info = transporter.sendMail({
                 from: '"Administrator" <com5630159@gmail.com>', // อีเมลผู้ส่ง
                 to: email, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
                 subject: 'Your password has been changed', // หัวข้ออีเมล
