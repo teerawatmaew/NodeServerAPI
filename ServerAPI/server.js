@@ -311,6 +311,42 @@ app.post('/signin-with-google', function (request, response) {
     });
 });
 
+app.post('/enroll/(:id)', (request, response) => {
+    var id = request.params.id;
+    var email = request.body.email;
+    var status = request.body.status;
+    connection.query('INSERT INTO enroll(user_email,course_id,status) VALUE(?,?,?)', [email, id, status], (err, results) => {
+        if (err) {
+            response.status(200).send("Please try again..");
+        } else {
+            const data = {
+                user_email: email,
+                course_id: id,
+                status: status
+            };
+            response.status(200).json(data);
+        }
+    });
+})
+
+app.get('/check-enroll-status/(:email)/(:course_id)', (request, response) => {
+    var id = request.params.id;
+    var email = request.params.email;
+    connection.query('SELECT * FROM enroll WHERE user_email=? AND course_id=?', [email, id], (err, results) => {
+        if (results.length > 0) {
+            const data = {
+                status: 1
+            };
+            response.status(200).json(data);
+        } else {
+            const data = {
+                status: 0
+            };
+            response.status(200).json(data);
+        }
+    });
+})
+
 //<================>
 // app is on port...
 //<================>
