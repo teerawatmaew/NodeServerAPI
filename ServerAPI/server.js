@@ -313,7 +313,7 @@ app.post('/signin-with-google', function (request, response) {
 
 app.post('/enroll/(:id)', (request, response) => {
     var id = request.params.id;
-    var email = request.body.email;
+    var email = request.body.user_email;
     var status = request.body.status;
     connection.query('INSERT INTO enroll(user_email,course_id,status) VALUE(?,?,?)', [email, id, status], (err, results) => {
         if (err) {
@@ -329,20 +329,64 @@ app.post('/enroll/(:id)', (request, response) => {
     });
 })
 
-app.get('/check-enroll-status/(:email)/(:course_id)', (request, response) => {
-    var id = request.params.id;
+app.get('/enroll-status/(:email)/(:course_id)', (request, response) => {
+    var id = request.params.course_id;
     var email = request.params.email;
     connection.query('SELECT * FROM enroll WHERE user_email=? AND course_id=?', [email, id], (err, results) => {
+        console.log(results);
         if (results.length > 0) {
             const data = {
-                status: 1
+                enroll_status: 0
             };
             response.status(200).json(data);
         } else {
             const data = {
-                status: 0
+                enroll_status: 1
             };
             response.status(200).json(data);
+        }
+    });
+})
+
+app.get('/course-enroll', (request, response) => {
+    connection.query('SELECT * FROM enroll', (err, results) => {
+        if (results.length > 0) {
+            response.status(200).json(results);
+        } else {
+            response.status(200).json("No data");
+        }
+    });
+})
+
+app.get('/course-enroll/dashboard', (request, response) => {
+    connection.query('SELECT course_id, name, Count(course_id) AS enrolled FROM enroll, course WHERE enroll.course_id = course.id GROUP BY course_id;', (err, results) => {
+        if (results.length > 0) {
+            response.status(200).json(results);
+        } else {
+            response.status(200).json("No data");
+        }
+    });
+})
+
+app.get('/course-enroll/(:email)', (request, response) => {
+    var email = request.params.email;
+    connection.query('SELECT enroll.id AS enroll_id,course.id,name,status FROM course,enroll WHERE course.id=enroll.course_id AND enroll.user_email =?', [email], (err, results) => {
+        if (results.length > 0) {
+            response.status(200).json(results);
+        } else {
+            response.status(200).json("No data");
+        }
+    });
+})
+
+app.get('/course-enroll/course/(:id)', (request, response) => {
+    var id = request.params.id;
+    var query = 'SELECT enroll.id AS enroll_id, course.id, name, fullname, user_email, status FROM course, enroll, accounts WHERE enroll.course_id = course.id AND enroll.user_email = accounts.email AND enroll.course_id =?';
+    connection.query(query, [id], (err, results) => {
+        if (results.length > 0) {
+            response.status(200).json(results);
+        } else {
+            response.status(200).json("No data");
         }
     });
 })
