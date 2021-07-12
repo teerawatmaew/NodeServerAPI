@@ -1,5 +1,4 @@
 require("dotenv").config();
-process.env.PWD = process.cwd()
 
 var mysql = require('mysql');
 var express = require('express');
@@ -10,6 +9,11 @@ var jwt = require("jsonwebtoken");
 var fs = require('fs');
 
 var app = express();
+
+var omise = require('omise')({
+    'publicKey': process.env.OMISE_PUBLIC_KEY,
+    'secretKey': process.env.OMISE_SECRET_KEY,
+});
 
 app.use((req, res, next) => {
     /*
@@ -168,10 +172,11 @@ app.put('/course', function (request, response) {
     var contact = request.body.contact;
     var active = request.body.active;
     var logo = request.body.logo_img;
+    var amount = request.body.amount;
     connection.query('SELECT * FROM course WHERE id = ?', [id], function (error, results, fields) {
         if (results.length > 0) {
-            connection.query('UPDATE course SET name=?, number_limit=?, register_startdate=?, register_enddate=?, startdate=?, enddate=?, create_by=?, create_date=?, update_by=?, update_date=?, user_owner=?, location=?, type=?, contact=?, active=?, logo_img=? WHERE id=?',
-                [name, limit, registerstart, registerend, start, end, createby, createdate, updateby, updatedate, owner, location, type, contact, active, logo, id], (err, result) => {
+            connection.query('UPDATE course SET name=?, number_limit=?, register_startdate=?, register_enddate=?, startdate=?, enddate=?, create_by=?, create_date=?, update_by=?, update_date=?, user_owner=?, location=?, type=?, contact=?, active=?, logo_img=?, amount=? WHERE id=?',
+                [name, limit, registerstart, registerend, start, end, createby, createdate, updateby, updatedate, owner, location, type, contact, active, logo, amount, id], (err, result) => {
                     if (err) {
                         throw err;
                         response.status(404).send("Can not update this course");
@@ -194,14 +199,15 @@ app.put('/course', function (request, response) {
                                 location: location,
                                 type: type,
                                 contact: contact,
-                                logo_img: logo
+                                logo_img: logo,
+                                amount: amount
                             }
                         });
                     }
                 });
         } else {
-            connection.query('INSERT INTO course(id, name, number_limit, register_startdate, register_enddate, startdate, enddate, create_by, create_date, user_owner, location, type, contact, active, logo_img) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)',
-                [id, name, limit, registerstart, registerend, start, end, createby, createdate, owner, location, type, contact, logo], (err, result) => {
+            connection.query('INSERT INTO course(id, name, number_limit, register_startdate, register_enddate, startdate, enddate, create_by, create_date, user_owner, location, type, contact, active, logo_img, amount) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)',
+                [id, name, limit, registerstart, registerend, start, end, createby, createdate, owner, location, type, contact, logo, amount], (err, result) => {
                 if (err) {
                     throw err;
                     response.status(404).send({ error: err });
@@ -224,7 +230,8 @@ app.put('/course', function (request, response) {
                             location: location,
                             type: type,
                             contact: contact,
-                            logo_img: logo
+                            logo_img: logo,
+                            amount: amount
                         }
                     });
                 }
@@ -273,8 +280,7 @@ app.get('/profile/user/(:keyword)', function (request, response) {
     });
 });
 
-app.post('/signin-with-google', function (request, response) {
-    console.log(request.body);
+app.post('/signin', function (request, response) {
     var user_data = request.body;
     connection.query('SELECT * FROM accounts WHERE email = ?',[user_data.email], (err, results) => {
         if (results.length > 0) {
@@ -287,7 +293,8 @@ app.post('/signin-with-google', function (request, response) {
                 address: results[0].address,
                 phone: results[0].phone,
                 confirmed: results[0].confirmed,
-                user_class: results[0].user_class
+                user_class: results[0].user_class,
+                id_number: results[0].id_number
             };
             const accessToken = generateAccessToken(user);
             const refreshToken = jwt.sign(user, process.env.REFRESH_TOKEN_SECRET);
@@ -307,6 +314,29 @@ app.post('/signin-with-google', function (request, response) {
                     response.status(200).json(user);
                 }
             });
+        }
+    });
+});
+
+app.put('/account/(:email)', function (request, response) {
+    var user = request.body;
+    var email = request.params.email;
+    connection.query('UPDATE accounts SET', [email], (err, results) => {
+        if (err) {
+            const user = {
+                email: results[0].email,
+                username: results[0].username,
+                fullname: results[0].fullname,
+                gender: results[0].gender,
+                detail: results[0].detail,
+                address: results[0].address,
+                phone: results[0].phone,
+                confirmed: results[0].confirmed,
+                user_class: results[0].user_class,
+                id_number: results[0].id_number
+            };
+        } else {
+
         }
     });
 });
@@ -348,6 +378,35 @@ app.get('/enroll-status/(:email)/(:course_id)', (request, response) => {
     });
 })
 
+app.get('/unenroll/(:email)/(:course_id)', (request, response) => {
+    var id = request.params.course_id;
+    var email = request.params.email;
+    connection.query('DELETE FROM enroll WHERE user_email=? AND course_id=?', [email, id], (err, results) => {
+        console.log(results);
+        if (results.length > 0) {
+            const data = {
+                enroll_status: 0
+            };
+            response.status(200).json(data);
+        } else {
+            const data = {
+                enroll_status: 1
+            };
+            response.status(200).json(data);
+        }
+    });
+})
+
+app.get('/course-amount/(:course_id)', (request, response) => {
+    connection.query('SELECT id,name,amount FROM course WHERE id=?', [request.params.course_id], (err, results) => {
+        if (results.length > 0) {
+            response.status(200).json({ course: results });
+        } else {
+            response.status(200).json("No data");
+        }
+    });
+})
+
 app.get('/course-enroll', (request, response) => {
     connection.query('SELECT * FROM enroll', (err, results) => {
         if (results.length > 0) {
@@ -374,17 +433,80 @@ app.get('/course-enroll/(:email)', (request, response) => {
         if (results.length > 0) {
             response.status(200).json(results);
         } else {
-            response.status(200).json("No data");
+            const data = {
+                enroll_id: 'nodata',
+                id: 'nodata',
+                name: 'nodata',
+                status: 0
+            };
+            response.status(200).json(data);
         }
     });
 })
 
 app.get('/course-enroll/course/(:id)', (request, response) => {
     var id = request.params.id;
-    var query = 'SELECT enroll.id AS enroll_id, course.id, name, fullname, user_email, status FROM course, enroll, accounts WHERE enroll.course_id = course.id AND enroll.user_email = accounts.email AND enroll.course_id =?';
+    var query = 'SELECT enroll.id AS enroll_id, course.id, name, fullname, user_email, status, id_number FROM course, enroll, accounts WHERE enroll.course_id = course.id AND enroll.user_email = accounts.email AND enroll.course_id =?';
     connection.query(query, [id], (err, results) => {
         if (results.length > 0) {
             response.status(200).json(results);
+        } else {
+            response.status(200).json("No data");
+        }
+    });
+})
+
+//====================================================
+//================= Payment API ======================
+//====================================================
+
+app.post('/checkout-credit-card/', async (req, res, next) => {
+    console.log(req.body);
+    var amount = (req.body.amount) * 100;
+    try {
+        const customer = await omise.customers.create({
+            'email': req.body.email,
+            'description': req.body.name,
+            'card': req.body.token,
+        });
+
+        const charge = await omise.charges.create({
+            'amount': amount,
+            'currency': 'thb',
+            'customer': customer.id,
+        });
+        console.log("Charge => ", charge);
+        if (charge.status == "successful") {
+            var detail = 'Bank : ' + charge.card.bank + '(' + charge.card.brand + ') Card Number : xxxx-xxxx-xxxx-'+ charge.card.last_digits +' Name on Card : ' + charge.card.name;
+            connection.query('INSERT INTO transaction VALUES(?,?,?,?,?,?,?,?)', [charge.id, req.body.email, req.body.course_id, charge.amount, charge.card.financing, charge.paid_at, charge.status, detail], (err, results) => {
+                if (err) {
+                    res.status(200).json(err);
+                }
+            });
+        }
+        res.status(200).json({ amount: charge.amount, status: charge.status });
+    } catch (error) {
+        console.log(error);
+    }
+    next();
+})
+
+app.get('/transaction-email/(:email)', (request, response) => {
+    var email = request.params.email;
+    connection.query('SELECT * FROM transaction WHERE user_email=?', [email], (err, results) => {
+        if (results.length > 0) {
+            response.status(200).json(results);
+        } else {
+            response.status(200).json("No data");
+        }
+    });
+})
+
+app.get('/transaction-id/(:charge_id)', (request, response) => {
+    var charge_id = request.params.charge_id;
+    connection.query('SELECT * FROM transaction WHERE charge_id=?', [charge_id], (err, results) => {
+        if (results.length > 0) {
+            response.status(200).json({ charge:results });
         } else {
             response.status(200).json("No data");
         }
