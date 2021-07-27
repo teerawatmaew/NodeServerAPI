@@ -96,9 +96,9 @@ app.put('/api/v1//user/:id', user.update);
 app.delete('/api/v1//user/:id', user.delete);
 
 
-//<========================>
-//<====== course api ======>
-//<========================>
+//<=============================================>
+//<================ course api =================>
+//<=============================================>
 
 app.get('/course', function (request, response) {
     connection.query('SELECT * FROM course', (err, results) => {
@@ -116,7 +116,7 @@ app.get('/course/:id', function (request, response) {
     connection.query('SELECT * FROM course WHERE id = ' + request.params.id, function (err, results) {
         if (err) {
             throw err;
-            response.status(404).send("Can not found user");
+            response.status(204).send("Can not found course");
         } else {
             response.status(200).send({ course: results });
         }
@@ -145,7 +145,7 @@ app.post('/course', function (request, response) {
             connection.query('INSERT INTO course(id, name, number_limit, register_startdate, register_enddate, startdate, enddate, create_by, create_date, user_owner, location, type, contact, active) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1)', [id, name, limit, registerstart, registerend, start, end, createby, createdate, owner, location, type, contact], (err, result) => {
                 if (err) {
                     throw err;
-                    response.send("Can not create new course");
+                    response.status(204).send("Can not create new course");
                 } else {
                     response.status(200).send("Create completed");
                 }
@@ -267,12 +267,11 @@ app.get('/search/course/(:keyword)', function (request, response) {
 });
 
 app.get('/profile/user/(:keyword)', function (request, response) {
-    //var data = request.body.data;
     var keyword = request.params.keyword;
     connection.query('SELECT email,username,fullname,detail,gender,address,phone FROM accounts WHERE email = ?',[keyword], (err, results) => {
         if (err) {
             throw err; 
-            response.status(404).send("Can not found users");
+            response.status(204).send("Can not found users");
         }
         else {
             response.status(200).json(results);
@@ -320,26 +319,32 @@ app.post('/signin', function (request, response) {
 
 app.put('/account/(:email)', function (request, response) {
     var user = request.body;
+    console.log(user);
     var email = request.params.email;
-    connection.query('UPDATE accounts SET', [email], (err, results) => {
+    connection.query('UPDATE accounts SET gender=?,detail=?,address=?,phone=?,confirmed=?,user_class=?,id_number=? WHERE email=?', [user.gender, user.detail, user.address, user.phone, user.confirmed, user.user_class, user.id_number, email], (err, results) => {
+        const user = {
+            email: results[0].email,
+            username: results[0].username,
+            fullname: results[0].fullname,
+            gender: results[0].gender,
+            detail: results[0].detail,
+            address: results[0].address,
+            phone: results[0].phone,
+            confirmed: results[0].confirmed,
+            user_class: results[0].user_class,
+            id_number: results[0].id_number
+        };
         if (err) {
-            const user = {
-                email: results[0].email,
-                username: results[0].username,
-                fullname: results[0].fullname,
-                gender: results[0].gender,
-                detail: results[0].detail,
-                address: results[0].address,
-                phone: results[0].phone,
-                confirmed: results[0].confirmed,
-                user_class: results[0].user_class,
-                id_number: results[0].id_number
-            };
+            response.status(204).send(user);
         } else {
-
+            response.status(200).send(user);
         }
     });
 });
+
+//=================================================
+//==================== Enroll =====================
+//=================================================
 
 app.post('/enroll/(:id)', (request, response) => {
     var id = request.params.id;
@@ -397,17 +402,7 @@ app.get('/unenroll/(:email)/(:course_id)', (request, response) => {
     });
 })
 
-app.get('/course-amount/(:course_id)', (request, response) => {
-    connection.query('SELECT id,name,amount FROM course WHERE id=?', [request.params.course_id], (err, results) => {
-        if (results.length > 0) {
-            response.status(200).json({ course: results });
-        } else {
-            response.status(200).json("No data");
-        }
-    });
-})
-
-app.get('/course-enroll', (request, response) => {
+app.get('/enrollment', (request, response) => {
     connection.query('SELECT * FROM enroll', (err, results) => {
         if (results.length > 0) {
             response.status(200).json(results);
@@ -417,7 +412,7 @@ app.get('/course-enroll', (request, response) => {
     });
 })
 
-app.get('/course-enroll/dashboard', (request, response) => {
+app.get('/enrollment/allcount', (request, response) => {
     connection.query('SELECT course_id, name, Count(course_id) AS enrolled FROM enroll, course WHERE enroll.course_id = course.id GROUP BY course_id;', (err, results) => {
         if (results.length > 0) {
             response.status(200).json(results);
@@ -460,9 +455,20 @@ app.get('/course-enroll/course/(:id)', (request, response) => {
 //================= Payment API ======================
 //====================================================
 
+app.get('/course-amount/(:course_id)', (request, response) => {
+    connection.query('SELECT id,name,amount FROM course WHERE id=?', [request.params.course_id], (err, results) => {
+        if (results.length > 0) {
+            response.status(200).json({ course: results });
+        } else {
+            response.status(200).json("No data");
+        }
+    });
+})
+
+
 app.post('/checkout-credit-card/', async (req, res, next) => {
     console.log(req.body);
-    var amount = (req.body.amount) * 100;
+    var amount = req.body.amount;
     try {
         const customer = await omise.customers.create({
             'email': req.body.email,
