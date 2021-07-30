@@ -428,13 +428,7 @@ app.get('/course-enroll/(:email)', (request, response) => {
         if (results.length > 0) {
             response.status(200).json(results);
         } else {
-            const data = {
-                enroll_id: 'nodata',
-                id: 'nodata',
-                name: 'nodata',
-                status: 0
-            };
-            response.status(200).json(data);
+            response.status(200).json("No data");
         }
     });
 })
